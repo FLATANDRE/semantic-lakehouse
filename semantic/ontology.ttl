@@ -1,0 +1,19 @@
+@prefix ex: <https://example.org/commerce/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+ex:CommerceOntology a owl:Ontology ; rdfs:label "Ontologia do domínio comercial"@pt-BR .
+ex:Customer a owl:Class .
+ex:Product a owl:Class .
+ex:Order a owl:Class .
+ex:OrderItem a owl:Class .
+ex:AIReadyDataset a owl:Class .
+ex:placedBy a owl:ObjectProperty ; rdfs:domain ex:Order ; rdfs:range ex:Customer .
+ex:hasItem a owl:ObjectProperty ; rdfs:domain ex:Order ; rdfs:range ex:OrderItem .
+ex:referencesProduct a owl:ObjectProperty ; rdfs:domain ex:OrderItem ; rdfs:range ex:Product .
+ex:classifiedAs a owl:ObjectProperty ; rdfs:domain ex:Product .
+ex:customerId a owl:DatatypeProperty ; rdfs:domain ex:Customer ; rdfs:range xsd:string .
+ex:productId a owl:DatatypeProperty ; rdfs:domain ex:Product ; rdfs:range xsd:string .
+ex:orderId a owl:DatatypeProperty ; rdfs:domain ex:Order ; rdfs:range xsd:string .
+ex:quantity a owl:DatatypeProperty ; rdfs:domain ex:OrderItem ; rdfs:range xsd:integer .
+ex:unitPrice a owl:DatatypeProperty ; rdfs:domain ex:Product ; rdfs:range xsd:decimal .

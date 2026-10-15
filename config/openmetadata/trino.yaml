@@ -1,0 +1,32 @@
+source:
+  type: trino
+  serviceName: lakehouse_trino
+  serviceConnection:
+    config:
+      type: Trino
+      hostPort: trino:8080
+      username: openmetadata
+      catalog: lakehouse
+      connectionArguments:
+        http_scheme: http
+  sourceConfig:
+    config:
+      type: DatabaseMetadata
+      includeTables: true
+      includeViews: true
+      includeDDL: true
+      markDeletedTables: true
+      markDeletedSchemas: true
+      schemaFilterPattern:
+        includes: [bronze, silver, gold]
+sink:
+  type: metadata-rest
+  config: {}
+workflowConfig:
+  loggerLevel: INFO
+  openMetadataServerConfig:
+    hostPort: http://openmetadata-server:8585/api
+    authProvider: openmetadata
+    securityConfig:
+      jwtToken: ${OPENMETADATA_JWT_TOKEN}
+    storeServiceConnection: true

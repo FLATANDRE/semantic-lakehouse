@@ -1,0 +1,33 @@
+source:
+  type: openlineage
+  serviceName: semantic_lakehouse_openlineage
+  serviceConnection:
+    config:
+      type: OpenLineage
+      brokerConfig:
+        brokersUrl: redpanda:9092
+        topicName: openlineage.events
+        consumerGroupName: openmetadata-consumer
+        consumerOffsets: earliest
+        poolTimeout: 1.0
+        sessionTimeout: 30
+        securityProtocol: PLAINTEXT
+  sourceConfig:
+    config:
+      type: PipelineMetadata
+      lineageInformation:
+        dbServiceNames: [lakehouse_trino]
+      includeLineage: true
+      includeUnDeployedPipelines: true
+      overrideLineage: false
+sink:
+  type: metadata-rest
+  config: {}
+workflowConfig:
+  loggerLevel: INFO
+  openMetadataServerConfig:
+    hostPort: http://openmetadata-server:8585/api
+    authProvider: openmetadata
+    securityConfig:
+      jwtToken: ${OPENMETADATA_JWT_TOKEN}
+    storeServiceConnection: true

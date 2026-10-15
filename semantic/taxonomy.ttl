@@ -1,0 +1,10 @@
+@prefix ex: <https://example.org/commerce/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+ex:product-taxonomy a skos:ConceptScheme ; skos:prefLabel "Taxonomia de produtos"@pt-BR .
+ex:electronics a skos:Concept ; skos:inScheme ex:product-taxonomy ; skos:prefLabel "Eletrônicos"@pt-BR ; skos:narrower ex:computers, ex:peripherals, ex:storage .
+ex:computers a skos:Concept ; skos:inScheme ex:product-taxonomy ; skos:prefLabel "Computadores"@pt-BR ; skos:broader ex:electronics ; skos:narrower ex:laptops .
+ex:laptops a skos:Concept ; skos:inScheme ex:product-taxonomy ; skos:prefLabel "Notebooks"@pt-BR ; skos:altLabel "Laptops"@pt-BR ; skos:notation "LAPTOPS" ; skos:broader ex:computers .
+ex:peripherals a skos:Concept ; skos:inScheme ex:product-taxonomy ; skos:prefLabel "Periféricos"@pt-BR ; skos:broader ex:electronics ; skos:narrower ex:accessories, ex:monitors .
+ex:accessories a skos:Concept ; skos:inScheme ex:product-taxonomy ; skos:prefLabel "Acessórios"@pt-BR ; skos:notation "ACCESSORIES" ; skos:broader ex:peripherals .
+ex:monitors a skos:Concept ; skos:inScheme ex:product-taxonomy ; skos:prefLabel "Monitores"@pt-BR ; skos:notation "MONITORS" ; skos:broader ex:peripherals .
+ex:storage a skos:Concept ; skos:inScheme ex:product-taxonomy ; skos:prefLabel "Armazenamento"@pt-BR ; skos:notation "STORAGE" ; skos:broader ex:electronics .

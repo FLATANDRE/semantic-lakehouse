@@ -1,0 +1,9 @@
+PREFIX ex: <https://example.org/commerce/>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+SELECT ?order ?customer ?product ?category ?quantity WHERE {
+  ?order a ex:Order ; ex:placedBy ?customer ; ex:hasItem ?item .
+  ?item ex:referencesProduct ?product ; ex:quantity ?quantity .
+  ?product ex:classifiedAs ?concept .
+  ?concept skos:prefLabel ?category .
+  FILTER(lang(?category) = "pt-BR")
+} ORDER BY ?order ?product

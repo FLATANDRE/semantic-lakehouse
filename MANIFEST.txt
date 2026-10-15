@@ -1,0 +1,16 @@
+Semantic AI-Ready Lakehouse
+Gerado em: 2026-10-15
+Validações executadas:
+- Sintaxe Python: OK
+- YAML/JSON: OK
+- RDF Turtle: OK
+- pytest: 2 passed
+
+Conteúdo principal:
+- Iceberg + Lakekeeper REST Catalog
+- SILO/PGSTY S3-compatible object storage
+- Spark + Trino
+- Airflow + OpenLineage/Redpanda
+- OpenMetadata configs e compose oficial separado
+- RDFLib + pySHACL + Fuseki
+- API FastAPI, testes, scripts e documentação

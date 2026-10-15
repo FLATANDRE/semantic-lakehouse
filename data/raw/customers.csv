@@ -1,0 +1,4 @@
+customer_id,name,email,country,created_at
+C001,Ana Lima,ANA.LIMA@EXAMPLE.COM,BR,2025-01-10
+C002,Bruno Souza,bruno.souza@example.com,BR,2025-02-14
+C003,Carla Mendes,carla.mendes@example.com,PT,2025-03-02

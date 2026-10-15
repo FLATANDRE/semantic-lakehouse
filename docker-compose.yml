@@ -1,0 +1,123 @@
+name: semantic-lakehouse
+services:
+  silo:
+    image: ${SILO_IMAGE:-pgsty/silo:RELEASE.2026-09-16T00-00-00Z}
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: ${SILO_ACCESS_KEY:-silo-root-user}
+      MINIO_ROOT_PASSWORD: ${SILO_SECRET_KEY:-silo-root-password}
+    ports: ["9000:9000","9001:9001"]
+    volumes: [silo-data:/data]
+  silo-init:
+    image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
+    depends_on: [silo]
+    entrypoint: /bin/sh
+    command: ["-c","until mc alias set local http://silo:9000 $${SILO_ACCESS_KEY} $${SILO_SECRET_KEY}; do sleep 2; done; mc mb --ignore-existing local/$${LAKEHOUSE_BUCKET};"]
+    environment:
+      SILO_ACCESS_KEY: ${SILO_ACCESS_KEY:-silo-root-user}
+      SILO_SECRET_KEY: ${SILO_SECRET_KEY:-silo-root-password}
+      LAKEHOUSE_BUCKET: ${LAKEHOUSE_BUCKET:-lakehouse}
+  lakekeeper-db:
+    image: postgres:16-alpine
+    environment: {POSTGRES_USER: lakekeeper, POSTGRES_PASSWORD: lakekeeper, POSTGRES_DB: lakekeeper}
+    volumes: [lakekeeper-db:/var/lib/postgresql/data]
+    healthcheck: {test: [CMD-SHELL, "pg_isready -U lakekeeper"], interval: 5s, timeout: 5s, retries: 20}
+  lakekeeper-migrate:
+    image: quay.io/lakekeeper/catalog:6fb47a9a-amd64
+    command: migrate
+    environment: &lk
+      LAKEKEEPER__PG_DATABASE_URL_READ: postgresql://lakekeeper:lakekeeper@lakekeeper-db:5432/lakekeeper
+      LAKEKEEPER__PG_DATABASE_URL_WRITE: postgresql://lakekeeper:lakekeeper@lakekeeper-db:5432/lakekeeper
+      LAKEKEEPER__PG_ENCRYPTION_KEY: local-development-only-change-me
+      LAKEKEEPER__AUTHZ_BACKEND: allowall
+      LAKEKEEPER__ENABLE_DEFAULT_PROJECT: "true"
+    depends_on: {lakekeeper-db: {condition: service_healthy}}
+  lakekeeper:
+    #image: quay.io/lakekeeper/catalog:v0.11.2-main
+    image: quay.io/lakekeeper/catalog:6fb47a9a-amd64
+    command: serve
+    environment: *lk
+    depends_on:
+      lakekeeper-migrate: {condition: service_completed_successfully}
+      silo-init: {condition: service_completed_successfully}
+    ports: ["8181:8181"]
+    healthcheck: {test: [CMD, /home/nonroot/lakekeeper, healthcheck], interval: 5s, timeout: 5s, retries: 30, start_period: 3s}
+  lakekeeper-bootstrap:
+    image: curlimages/curl:8.12.1
+    depends_on: {lakekeeper: {condition: service_healthy}}
+    volumes: [./config/lakekeeper:/config:ro]
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        curl -sS -X POST http://lakekeeper:8181/management/v1/bootstrap -H 'Content-Type: application/json' -d '{"accept-terms-of-use":true}' || true
+        curl -sS -X POST http://lakekeeper:8181/management/v1/warehouse -H 'Content-Type: application/json' --data-binary @/config/warehouse.json || true
+  trino:
+    image: trinodb/trino:483
+    depends_on: {lakekeeper-bootstrap: {condition: service_completed_successfully}}
+    ports: ["8080:8080"]
+    volumes:
+      - ./config/trino/config.properties:/etc/trino/config.properties:ro
+      - ./config/trino/node.properties:/etc/trino/node.properties:ro
+      - ./config/trino/jvm.config:/etc/trino/jvm.config:ro
+      - ./config/trino/lakehouse.properties:/etc/trino/catalog/lakehouse.properties:ro
+  redpanda:
+    image: redpandadata/redpanda:v25.2.9
+    command: redpanda start --overprovisioned --smp 1 --memory 1G --reserve-memory 0M --node-id 0 --check=false --kafka-addr 0.0.0.0:9092 --advertise-kafka-addr redpanda:9092
+    ports: ["9092:9092"]
+  redpanda-init:
+    image: redpandadata/redpanda:v25.2.9
+    depends_on: [redpanda]
+    entrypoint: /bin/bash
+    command: ["-c","until rpk cluster info -X brokers=redpanda:9092; do sleep 2; done; rpk topic create openlineage.events -X brokers=redpanda:9092 || true"]
+  fuseki:
+    image: atomgraph/fuseki:6.1.0
+    environment: {ADMIN_PASSWORD: change-me}
+    command: [--mem, /lakehouse]
+    ports: ["3030:3030"]
+    volumes: [fuseki-data:/fuseki]
+  spark-runner:
+    image: semantic-lakehouse-spark:local
+    build: {context: ., dockerfile: docker/Dockerfile.spark}
+    profiles: [jobs]
+    depends_on: [lakekeeper,redpanda,fuseki]
+    working_dir: /opt/lakehouse/jobs
+    environment: {FUSEKI_DATA_URL: "http://fuseki:3030/lakehouse/data"}
+    volumes: [./:/opt/lakehouse,ivy-cache:/home/spark/.ivy2]
+  api:
+    build: ./api
+    depends_on: [trino,fuseki]
+    environment: {FUSEKI_QUERY_URL: "http://fuseki:3030/lakehouse/query", TRINO_URL: "http://trino:8080/v1/statement"}
+    ports: ["8000:8000"]
+  airflow-db:
+    image: postgres:16-alpine
+    environment: {POSTGRES_USER: airflow, POSTGRES_PASSWORD: airflow, POSTGRES_DB: airflow}
+    volumes: [airflow-db:/var/lib/postgresql/data]
+    healthcheck: {test: [CMD-SHELL, "pg_isready -U airflow"], interval: 5s, timeout: 5s, retries: 20}
+  airflow-init:
+    build: {context: ., dockerfile: docker/Dockerfile.airflow}
+    entrypoint: /bin/bash
+    command: ["-c","airflow db migrate && airflow users create --username admin --password admin --firstname Andre --lastname Santana --role Admin --email admin@example.org || true"]
+    environment: &af
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__OPENLINEAGE__NAMESPACE: semantic-lakehouse-airflow
+      LAKEHOUSE_HOST_PATH: ${PWD}
+      AIRFLOW__OPENLINEAGE__TRANSPORT: '{"type":"kafka","topic":"openlineage.events","config":{"bootstrap.servers":"redpanda:9092"}}'
+    depends_on: {airflow-db: {condition: service_healthy}}
+  airflow:
+    build: {context: ., dockerfile: docker/Dockerfile.airflow}
+    command: standalone
+    environment: *af
+    depends_on: {airflow-init: {condition: service_completed_successfully}}
+    ports: ["8082:8080"]
+    volumes: [./airflow/dags:/opt/airflow/dags,./:/opt/lakehouse,/var/run/docker.sock:/var/run/docker.sock]
+  openmetadata-runner:
+    image: docker.getcollate.io/openmetadata/ingestion:${OPENMETADATA_VERSION:-2.0.2}
+    profiles: [governance]
+    working_dir: /opt/project
+    volumes: [./config/openmetadata:/opt/project/config:ro]
+    entrypoint: []
+    command: ["metadata","--version"]
+volumes: {silo-data: {}, lakekeeper-db: {}, ivy-cache: {}, fuseki-data: {}, airflow-db: {}}

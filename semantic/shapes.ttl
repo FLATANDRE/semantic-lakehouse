@@ -1,0 +1,8 @@
+@prefix ex: <https://example.org/commerce/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+ex:CustomerShape a sh:NodeShape ; sh:targetClass ex:Customer ; sh:property [ sh:path ex:customerId ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] .
+ex:ProductShape a sh:NodeShape ; sh:targetClass ex:Product ; sh:property [ sh:path ex:productId ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ; sh:property [ sh:path ex:classifiedAs ; sh:minCount 1 ; sh:class skos:Concept ] ; sh:property [ sh:path ex:unitPrice ; sh:minCount 1 ; sh:datatype xsd:decimal ; sh:minExclusive 0 ] .
+ex:OrderShape a sh:NodeShape ; sh:targetClass ex:Order ; sh:property [ sh:path ex:orderId ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ; sh:property [ sh:path ex:placedBy ; sh:minCount 1 ; sh:class ex:Customer ] ; sh:property [ sh:path ex:hasItem ; sh:minCount 1 ; sh:class ex:OrderItem ] .
+ex:OrderItemShape a sh:NodeShape ; sh:targetClass ex:OrderItem ; sh:property [ sh:path ex:referencesProduct ; sh:minCount 1 ; sh:class ex:Product ] ; sh:property [ sh:path ex:quantity ; sh:minCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ] .
