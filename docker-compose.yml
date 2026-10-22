@@ -104,7 +104,7 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
       AIRFLOW__OPENLINEAGE__NAMESPACE: semantic-lakehouse-airflow
       LAKEHOUSE_HOST_PATH: ${PWD}
-      AIRFLOW__OPENLINEAGE__TRANSPORT: '{"type":"kafka","topic":"openlineage.events","config":{"bootstrap.servers":"redpanda:9092"}}'
+      AIRFLOW__OPENLINEAGE__TRANSPORT: '{"type":"kafka","topic":"openlineage.events","config":{"bootstrap.servers":"redpanda:9092","key.serializer":"org.apache.kafka.common.serialization.StringSerializer","value.serializer":"org.apache.kafka.common.serialization.StringSerializer"}}'
     depends_on: {airflow-db: {condition: service_healthy}}
   airflow:
     build: {context: ., dockerfile: docker/Dockerfile.airflow}
@@ -120,4 +120,7 @@ services:
     volumes: [./config/openmetadata:/opt/project/config:ro]
     entrypoint: []
     command: ["metadata","--version"]
+    networks: [default, openmetadata]
+networks:
+  openmetadata: {name: semantic-lakehouse_app_net, external: true}
 volumes: {silo-data: {}, lakekeeper-db: {}, ivy-cache: {}, fuseki-data: {}, airflow-db: {}}

@@ -8,7 +8,7 @@ HOST_PATH=os.environ.get("LAKEHOUSE_HOST_PATH")
 if not HOST_PATH:
     raise RuntimeError("Defina LAKEHOUSE_HOST_PATH com o caminho absoluto do projeto no host")
 def command(job):
-    return f"/opt/spark/bin/spark-submit --packages {PACKAGES} --conf spark.extraListeners=io.openlineage.spark.agent.OpenLineageSparkListener --conf spark.openlineage.transport.type=kafka --conf spark.openlineage.transport.topicName=openlineage.events --conf spark.openlineage.transport.properties.bootstrap.servers=redpanda:9092 --conf spark.openlineage.namespace=semantic-lakehouse /opt/lakehouse/jobs/{job}"
+    return f"/opt/spark/bin/spark-submit --packages {PACKAGES} --conf spark.extraListeners=io.openlineage.spark.agent.OpenLineageSparkListener --conf spark.openlineage.transport.type=kafka --conf spark.openlineage.transport.topicName=openlineage.events --conf spark.openlineage.transport.properties.bootstrap.servers=redpanda:9092 --conf spark.openlineage.transport.properties.key.serializer=org.apache.kafka.common.serialization.StringSerializer --conf spark.openlineage.transport.properties.value.serializer=org.apache.kafka.common.serialization.StringSerializer --conf spark.openlineage.namespace=semantic-lakehouse /opt/lakehouse/jobs/{job}"
 def task(task_id,job):
     mounts=[Mount(source=HOST_PATH,target="/opt/lakehouse",type="bind"),Mount(source="semantic-lakehouse_ivy-cache",target="/home/spark/.ivy2",type="volume")]
     return DockerOperator(task_id=task_id,image="semantic-lakehouse-spark:local",command=command(job),docker_url="unix://var/run/docker.sock",network_mode="semantic-lakehouse_default",auto_remove="success",mounts=mounts)

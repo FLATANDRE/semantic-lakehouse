@@ -9,5 +9,7 @@ for job in ingest_bronze.py transform_silver.py build_gold.py semantic_graph.py 
     --conf spark.openlineage.transport.type=kafka \
     --conf spark.openlineage.transport.topicName=openlineage.events \
     --conf spark.openlineage.transport.properties.bootstrap.servers=redpanda:9092 \
+    --conf spark.openlineage.transport.properties.key.serializer=org.apache.kafka.common.serialization.StringSerializer \
+    --conf spark.openlineage.transport.properties.value.serializer=org.apache.kafka.common.serialization.StringSerializer \
     --conf spark.openlineage.namespace=semantic-lakehouse "/opt/lakehouse/jobs/$job"
 done
